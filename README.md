@@ -9,8 +9,9 @@
 这里可以简要描述作业（项目）的基本背景情况，它源自哪里？能够有效解决哪些问题？可以尽情列举它的亮点哦
 
 ## 成功效果展示
-![fractal demo](./data/fractal.jpg)
 ![games101hw8](./games101hw8/spring.jpg)
+
+
 ![table_tennis](./table_tennis/tennis.jpg)
 ## 整体结构（Optional）
 脉络清晰的结构能完整展示你的设计思想，以及实现方式，方便读者快读代入，建议可以在repo的目录中包含如下内容：
