@@ -1,4 +1,4 @@
-- It costs a day to do.
+- It costs me a day to do.
 - There may be still some bugs, but I have no time to find and fix
 - a represent adding angle
 - d represent decreasing angle
