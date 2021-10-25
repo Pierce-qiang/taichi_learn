@@ -4,13 +4,13 @@
 
 ## 成功效果展示
 - Games101作业8
-![games101hw8](./games101hw8/spring.jpg)
+![games101hw8](./games101hw8/spring_mode3.gif)
 - 一个简单的桌球
 
 
 
 
-![table_tennis](./table_tennis/tennis.jpg)
+![table_tennis](./table_tennis/table_tennis.gif)
 ## 整体结构（Optional）
 ```
 -LICENSE
