@@ -28,6 +28,7 @@ class Table_tennis: # all ball number = 15+1
         self.height = height
     @ti.kernel
     def init(self):
+        self.score[None] = 0
         self.pos[0] = ti.Vector([0.5 * self.width,0.2 * self.height])
         center = ti.Vector([0.5 * self.width,0.5 * self.height])
         index = 1
