@@ -4,12 +4,13 @@
 
 ## 成功效果展示
 - Games101作业8
-![games101hw8](./games101hw8/spring_mode3.gif)
-- 一个简单的桌球
+![games101hw8](./games101hw8/spring_mode2.gif)
 
 
 
 
+- 一个简单的桌球游戏,代码码累了，来打个桌球吧
+- 
 ![table_tennis](./table_tennis/table_tennis.gif)
 ## 整体结构（Optional）
 ```
