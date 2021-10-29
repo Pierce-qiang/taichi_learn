@@ -23,7 +23,7 @@
 
 - hw4 # reference ==> https://www.shadertoy.com/view/WtScDt#
 
-![table_tennis](.//table_tennis.gif)
+![table_tennis](./procedural_animation_hw5/Bandlimited_with_antialiasing.gif)
 ## 整体结构（Optional）
 ```
 -LICENSE
