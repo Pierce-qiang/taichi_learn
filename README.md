@@ -23,7 +23,14 @@
 
 - hw4 # reference ==> https://www.shadertoy.com/view/WtScDt#
 
-![table_tennis](./procedural_animation_hw5/Bandlimited_with_antialiasing.gif)
+![procedural_animation](./procedural_animation_hw5/Bandlimited_with_antialiasing.gif)
+
+
+- hw10 加了个洒水器
+
+
+![sph_hw10](./sph_hw10/sph_0.gif)
+![sph_hw10](./sph_hw10/sph_2.gif)
 ## 整体结构（Optional）
 ```
 -LICENSE
