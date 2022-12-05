@@ -1,8 +1,0 @@
-- It costs me a day to do.
-- There may be still some bugs, but I have no time to find and fix
-- a represent adding angle
-- d represent decreasing angle
-- w represent adding velocity
-- s represent decreasing velocity
-- z represent hit the white ball
-- 1,2,3,4 change the gain

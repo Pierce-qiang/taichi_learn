@@ -1,1 +1,0 @@
-- Games101作业8不支持windows，就用taichi做了

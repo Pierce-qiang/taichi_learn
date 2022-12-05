@@ -1,3 +1,0 @@
-- # reference ==> https://www.shadertoy.com/view/WtScDt#
-- I cannot find fwidth function or ddx, so I use 16 textures
-- you can change the flag "filter_" to change whether to filter
