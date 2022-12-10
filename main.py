@@ -27,12 +27,12 @@ delta_t = 0.1
 table_tennis = Table_tennis(friction_coeff,hole_radius,tennis_radius,width,height)
 table_tennis.init()
 # GUI
-my_gui = ti.GUI("table tennis", res)
+
+my_gui = ti.GUI("table tennis", res,table_tennis.background_color)
 velocity_size = 100.0
 dir_angle = 0
 gain_angle = 1.0
 gain_vel = 10.0
-
 
 
 def check_win():
@@ -43,8 +43,19 @@ def check_win():
             break
     return res
 
+first_static = 0
 while my_gui.running:
     while table_tennis.check_static()<0.1:
+        if first_static == 1:
+            table_tennis.hit_finish()
+            first_static = 0
+            if table_tennis.game_state == 0:
+                print("Player 1 win")
+                exit()
+            if table_tennis.game_state == 1:
+                print("Player 2 win")
+                exit()
+
         for e in my_gui.get_events(ti.GUI.PRESS):
             if e.key == ti.GUI.ESCAPE:
                 exit()
@@ -73,23 +84,30 @@ while my_gui.running:
             elif e.key == 'z':
                 radian = dir_angle * 2 * np.pi /360
                 table_tennis.hit(velocity_size, np.cos(radian), np.sin(radian))
-        pos = table_tennis.ball.pos[0] # here is reference！！！！！
+                table_tennis.in_hit = 1
+                table_tennis.first_collision = 0
+                table_tennis.first_hit = 0
+                first_static = 1
+            
+
+        
+        #做出击球线
+        pos = table_tennis.ball.pos[0]  
         radian = dir_angle * 2 * np.pi /360
         dir = ti.Vector([np.cos(radian), np.sin(radian)]) * velocity_size
         dir.x += pos.x
         dir.y += pos.y
-        my_gui.line(ti.Vector([pos.x/width,pos.y/height]),ti.Vector([dir.x/width,dir.y/height]), color=0x00ff00)
+        my_gui.line(ti.Vector([pos.x/width,pos.y/height]),ti.Vector([dir.x/width,dir.y/height]), table_tennis.line_color[table_tennis.now_player[0]])
         table_tennis.display(my_gui, velocity_size, dir_angle)
+
+
+
     for e in my_gui.get_events(ti.GUI.PRESS):
         if e.key == ti.GUI.ESCAPE:
             exit()
         elif e.key == 'r':
             table_tennis.init()
     table_tennis.update(delta_t)
+    table_tennis.collision_white_balls()
     table_tennis.display(my_gui, velocity_size, dir_angle)
-    if table_tennis.roll_in[0] == 1:
-        print("You Lose")
-        exit()
-    if check_win() > 0.01:
-        print("You Win")
-        exit()  
+

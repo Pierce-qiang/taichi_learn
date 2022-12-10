@@ -2,6 +2,8 @@ import numpy as np
 import taichi as ti
 ti.init(arch=ti.cpu)
 
+#1到15号共15颗目标球，1到7号球为全色球，8号为黑色球，9到15号为双色球（又称花色球）。
+#0号为白色球
 @ti.data_oriented
 class ball:
     def __init__(self, ball_radius):
@@ -10,6 +12,9 @@ class ball:
         self.pos = ti.Vector.field(2, ti.f32, 16)
         self.vel = ti.Vector.field(2, ti.f32, 16)
         self.vel = ti.Vector.field(2, ti.f32, 16)
+
+        self.color = [0xffffff,0xFF1493,0xFF1493,0xFF1493,0xFF1493,0xFF1493,0xFF1493,0xFF1493,
+        0x000000,0x8B4513,0x8B4513,0x8B4513,0x8B4513,0x8B4513,0x8B4513,0x8B4513]
 
     @ti.func
     def init(self,table_width,table_height):

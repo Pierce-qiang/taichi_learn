@@ -3,6 +3,7 @@ import taichi as ti
 ti.init(arch=ti.cpu)
 from ball import *
 from table import *
+from player import *
 
 
 @ti.data_oriented
@@ -13,8 +14,34 @@ class Table_tennis: # all ball number = 15+1
         self.table = table(hole_radius,width, height)
 
         self.roll_in = ti.field(ti.i32, shape=16) # notice 0:not in   1: roll in
+        self.last_rollin = ti.field(ti.i32, shape = 16)
+
         self.score = ti.field(ti.f32, shape=())
         self.friction_coeff = friction_coeff
+        self.background_color = 0x3CB371
+        self.hole_color = 0x000000
+
+        self.line_color = ti.field(ti.i32, shape=2)
+        self.line_color[0] = 0xB22222
+        self.line_color[1] = 0xFFA500
+
+        self.ball_choose = ti.field(ti.i32, shape=1)
+        self.ball_choose[0] = 0 #0未选色，1已经选色
+        self.now_player = ti.field(ti.i32, shape=1)
+        self.now_player[0] = 0 #选择0或者1
+
+        self.player = player([-1,-1], self.line_color )
+        
+        # self.in_hit = 0 #在一次击球过程中
+        self.first_collision = ti.field(ti.i32, shape=1)
+        self.first_hit = ti.field(ti.i32, shape=1)
+        self.game_state = ti.field(ti.i32, shape=1)
+
+        self.first_collision[0] = 0 #白球是否发生了第一次碰撞
+        self.first_hit[0] = 0 #第一个碰到的球
+        self.game_state[0] = -1 # -1: not end;0:player 1 win; 1:player 2 win
+        
+
 
     @ti.kernel
     def init(self):
@@ -22,6 +49,7 @@ class Table_tennis: # all ball number = 15+1
 
         self.ball.init(self.table.width, self.table.height)
         self.table.init()
+        
 
         for k in range(16):
             self.ball.vel[k] = ti.Vector([0.0,0.0])
@@ -50,6 +78,26 @@ class Table_tennis: # all ball number = 15+1
                             offset = dir * (2*self.ball.ball_radius - delta_x) *0.5
                             self.ball.pos[i] += offset
                             self.ball.pos[j] -= offset
+
+    @ti.kernel
+    def collision_white_balls(self):
+        first_collision = self.first_collision[0]
+
+        first_hit = 0
+
+        posA = self.ball.pos[0]
+        for j in range(1,16):
+            if self.roll_in[0] == 0:
+                posB = self.ball.pos[j]
+                dir = posA - posB
+                delta_x = dir.norm()
+                if delta_x < 2*self.ball.ball_radius:
+                    if first_collision == 0: #检测第一个碰到的球
+                        first_hit = j
+                        first_collision = 1
+
+        self.first_collision[0] = first_collision
+        self.first_hit[0] = first_hit
 
 
     @ti.func
@@ -81,6 +129,68 @@ class Table_tennis: # all ball number = 15+1
                 self.check_roll_in(i)
                 self.check_boundary(i)
 
+    @ti.kernel
+    def hit_finish(self):
+        #结束一次击球，需要判断击球是否犯规
+        if self.player.ball_choose_finish == 1:
+            hit_result = self.change_player()
+            if hit_result == 2:
+                self.game_state[0] = 1-self.now_player[0]
+            elif hit_result == 3:
+                self.game_state[0] = self.now_player[0]
+            elif hit_result == 1:
+                self.now_player[0] = 1-self.now_player[0]
+            else:
+                pass
+    
+    @ti.func
+    def change_player(self) -> ti.i16:
+        # 返回0，继续击球，返回1，交换击球，返回2，直接结束游戏（比赛输了；返回3，进黑八，比赛赢了
+        change_id = 0
+        wrong_hit_flag = 1
+        if self.player.ball_choose[self.now_player[0]] == 0:#打花色球1-7
+            if self.first_hit[0]>=0 and self.first_hit[0]<=7:
+                wrong_hit_flag=0
+        if self.player.ball_choose[self.now_player[0]] == 1:#打全色球9-15
+            if self.first_hit[0]>=9 and self.first_hit[0]<=15:
+                wrong_hit_flag=0
+            
+        if self.roll_in[8] == 1:#进黑八直接结束
+            if self.player.hit_black[self.now_player[0]]==1:
+                change_id =3
+            else:
+                change_id = 2
+        elif self.roll_in[0] == 1: #进了白球
+            self.free_ball()
+            self.roll_in[0] = 0
+
+            change_id =1 
+        elif wrong_hit_flag: #先碰到了别人球
+            self.free_ball()
+
+            change_id = 1
+        else: #正常击球
+            flag = 0
+            for i in range(0,16):
+                if self.last_rollin[i] != self.roll_in[i]:
+                    if i >= self.player.target_ball[self.player.ball_choose[self.now_player[0]],0] and i <= self.player.target_ball[self.player.ball_choose[self.now_player[0]],6]:
+
+                        change_id = 0
+                        flag = 1
+            if flag == 0:
+
+                change_id = 1
+        
+        return change_id
+
+    
+    #这里需要可以手动选择位置
+    @ti.func
+    def free_ball(self):#自由球
+        self.ball.pos[0] = ti.Vector([0.2 * self.table.width,0.5 * self.table.height])
+
+
+    
 
     @ti.func
     def safe_sqrt(self, x) ->ti.f32:
@@ -131,16 +241,15 @@ class Table_tennis: # all ball number = 15+1
         pos_np = self.ball.pos.to_numpy()
         pos_np[:, 0] /= self.table.width
         pos_np[:, 1] /= self.table.height
-        plot_balls = []
-        for i in range(1,16):
+
+        for i in range(0,16):
             if self.roll_in[i] == 0:
-                plot_balls.append(pos_np[i])
-        gui.circles(np.array(plot_balls), radius=self.ball.ball_radius, color=0xff0000)
-        gui.circles(np.array([pos_np[0]]), radius=self.ball.ball_radius, color=0xffffff)
+                gui.circle(pos_np[i], radius=self.ball.ball_radius, color=self.ball.color[i])
+
         hole_np = self.table.hole_pos.to_numpy()
         hole_np[:, 0] /= self.table.width
         hole_np[:, 1] /= self.table.height
-        gui.circles(hole_np, radius=self.table.hole_radius, color=0xffff00)
+        gui.circles(hole_np, radius=self.table.hole_radius, color=self.hole_color)
         gui.text(content=f'score = {self.score}', pos=(0, 0.90), color=0xffaa77, font_size=24)
         gui.text(content=f'velocity = {velocity_size}', pos=(0, 0.80), color=0xffaa77, font_size=24)
         gui.text(content=f'angle = {dir_angle:.2f}', pos=(0, 0.70), color=0xffaa77, font_size=24)
