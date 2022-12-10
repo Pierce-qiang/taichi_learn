@@ -4,23 +4,6 @@ ti.init(arch=ti.cpu)
 from ball import *
 from table import *
 
-#定义台球游戏中尺寸信息
-tb_origin_width = 2830
-tb_origin_height = 1550
-reduce_scale  = 4
-tennis_origin_radius = 57/2
-hole_origin_redius = 85/2
-tennis_radius = tennis_origin_radius/reduce_scale
-hole_radius = hole_origin_redius/reduce_scale
-
-width = tb_origin_width//reduce_scale
-height = tb_origin_height//reduce_scale
-res = (width,height)
-
-
-#physics parameter
-friction_coeff = 0.1
-delta_t = 0.1
 
 @ti.data_oriented
 class Table_tennis: # all ball number = 15+1
@@ -71,9 +54,9 @@ class Table_tennis: # all ball number = 15+1
 
     @ti.func
     def check_boundary(self,index):
-        if self.ball.pos[index].x > width - self.ball.ball_radius or self.ball.pos[index].x < self.ball.ball_radius:
+        if self.ball.pos[index].x > self.table.width - self.ball.ball_radius or self.ball.pos[index].x < self.ball.ball_radius:
             self.ball.vel[index].x *= -1
-        elif  self.ball.pos[index].y < self.ball.ball_radius or self.ball.pos[index].y  > height-self.ball.ball_radius:
+        elif  self.ball.pos[index].y < self.ball.ball_radius or self.ball.pos[index].y  > self.table.height-self.ball.ball_radius:
             self.ball.vel[index].y *= -1
 
 
@@ -101,7 +84,7 @@ class Table_tennis: # all ball number = 15+1
 
     @ti.func
     def safe_sqrt(self, x) ->ti.f32:
-        x = max(x, 0.0)
+        x = ti.max(x, 0.0)
         return ti.sqrt(x)
 
     @ti.func
@@ -144,7 +127,7 @@ class Table_tennis: # all ball number = 15+1
                 res += self.ball.vel[i].norm()
         return res
 
-    def display(self, gui):
+    def display(self, gui, velocity_size, dir_angle):
         pos_np = self.ball.pos.to_numpy()
         pos_np[:, 0] /= self.table.width
         pos_np[:, 1] /= self.table.height
@@ -162,74 +145,3 @@ class Table_tennis: # all ball number = 15+1
         gui.text(content=f'velocity = {velocity_size}', pos=(0, 0.80), color=0xffaa77, font_size=24)
         gui.text(content=f'angle = {dir_angle:.2f}', pos=(0, 0.70), color=0xffaa77, font_size=24)
         gui.show()
-
-# control
-table_tennis = Table_tennis(friction_coeff,hole_radius,tennis_radius,width,height)
-table_tennis.init()
-# GUI
-my_gui = ti.GUI("table tennis", res)
-velocity_size = 100.0
-dir_angle = 0
-gain_angle = 1.0
-gain_vel = 10.0
-
-
-
-def check_win():
-    res = 1
-    for i in range(1, 16):
-        if table_tennis.roll_in[i] == 0:
-            res = 0
-            break
-    return res
-
-while my_gui.running:
-    while table_tennis.check_static()<0.1:
-        for e in my_gui.get_events(ti.GUI.PRESS):
-            if e.key == ti.GUI.ESCAPE:
-                exit()
-            elif e.key == 'r':
-                table_tennis.init()
-            elif e.key == 'a':
-                dir_angle += 1*gain_angle
-                dir_angle %= 360
-            elif e.key == 'd':
-                dir_angle -= 1*gain_angle
-                dir_angle %= 360
-            elif e.key == 'w':
-                velocity_size += 1.0 * gain_vel
-                velocity_size = min(velocity_size,200)
-            elif e.key == 's':
-                velocity_size -= 1.0 * gain_vel
-                velocity_size = max(0.0, velocity_size)
-            elif e.key == '1':
-                gain_angle += 10.0
-            elif e.key == '2':
-                gain_angle -= 10.0
-            elif e.key == '3':
-                gain_vel += 10.0
-            elif e.key == '4':
-                gain_vel -= 10.0
-            elif e.key == 'z':
-                radian = dir_angle * 2 * np.pi /360
-                table_tennis.hit(velocity_size, np.cos(radian), np.sin(radian))
-        pos = table_tennis.ball.pos[0] # here is reference！！！！！
-        radian = dir_angle * 2 * np.pi /360
-        dir = ti.Vector([np.cos(radian), np.sin(radian)]) * velocity_size
-        dir.x += pos.x
-        dir.y += pos.y
-        my_gui.line(ti.Vector([pos.x/width,pos.y/height]),ti.Vector([dir.x/width,dir.y/height]), color=0x00ff00)
-        table_tennis.display(my_gui)
-    for e in my_gui.get_events(ti.GUI.PRESS):
-        if e.key == ti.GUI.ESCAPE:
-            exit()
-        elif e.key == 'r':
-            table_tennis.init()
-    table_tennis.update(delta_t)
-    table_tennis.display(my_gui)
-    if table_tennis.roll_in[0] == 1:
-        print("You Lose")
-        exit()
-    if check_win() > 0.01:
-        print("You Win")
-        exit()
