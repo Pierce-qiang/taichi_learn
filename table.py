@@ -1,8 +1,7 @@
 import numpy as np
 import taichi as ti
-ti.init(arch=ti.cpu)
 
-@ti.data_oriented
+
 class table:
     def __init__(self, hole_radius, width, height):
         self.width = width
@@ -10,7 +9,7 @@ class table:
         self.hole_radius = hole_radius
         self.hole_pos = ti.Vector.field(2, ti.f32, 6)
 
-    @ti.func
+
     def init(self):
         self.hole_pos[0] = ti.Vector([0.0, 0.0])
         self.hole_pos[1] = ti.Vector([0.5, 0.0])

@@ -10,7 +10,7 @@ tb_origin_width = 2830
 tb_origin_height = 1550
 reduce_scale  = 4
 tennis_origin_radius = 57/2
-hole_origin_redius = 85/2
+hole_origin_redius = 150/2
 tennis_radius = tennis_origin_radius/reduce_scale
 hole_radius = hole_origin_redius/reduce_scale
 
@@ -48,7 +48,9 @@ while my_gui.running:
     while table_tennis.check_static()<0.1:
         if first_static == 1:
             table_tennis.hit_finish()
+            table_tennis.first_collision=0
             first_static = 0
+            print('stop')
             if table_tennis.game_state == 0:
                 print("Player 1 win")
                 exit()
@@ -97,8 +99,9 @@ while my_gui.running:
         dir = ti.Vector([np.cos(radian), np.sin(radian)]) * velocity_size
         dir.x += pos.x
         dir.y += pos.y
-        my_gui.line(ti.Vector([pos.x/width,pos.y/height]),ti.Vector([dir.x/width,dir.y/height]), table_tennis.line_color[table_tennis.now_player[0]])
+        my_gui.line(ti.Vector([pos.x/width,pos.y/height]),ti.Vector([dir.x/width,dir.y/height]), color=table_tennis.line_color[table_tennis.now_player[0]])
         table_tennis.display(my_gui, velocity_size, dir_angle)
+
 
 
 

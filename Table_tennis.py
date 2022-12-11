@@ -1,6 +1,5 @@
 import numpy as np
 import taichi as ti
-ti.init(arch=ti.cpu)
 from ball import *
 from table import *
 from player import *
@@ -33,17 +32,17 @@ class Table_tennis: # all ball number = 15+1
         self.player = player([-1,-1], self.line_color )
         
         # self.in_hit = 0 #在一次击球过程中
-        self.first_collision = ti.field(ti.i32, shape=1)
-        self.first_hit = ti.field(ti.i32, shape=1)
-        self.game_state = ti.field(ti.i32, shape=1)
+        self.first_collision = 0#白球是否发生了第一次碰撞
 
-        self.first_collision[0] = 0 #白球是否发生了第一次碰撞
-        self.first_hit[0] = 0 #第一个碰到的球
+        # self.first_hit = ti.field(ti.i32, shape=1)
+        # self.first_hit[0] = 0 #第一个碰到的球
+        self.first_hit = 0
+        self.game_state = ti.field(ti.i32, shape=1)
         self.game_state[0] = -1 # -1: not end;0:player 1 win; 1:player 2 win
         
 
 
-    @ti.kernel
+
     def init(self):
         self.score[None] = 0
 
@@ -79,25 +78,21 @@ class Table_tennis: # all ball number = 15+1
                             self.ball.pos[i] += offset
                             self.ball.pos[j] -= offset
 
-    @ti.kernel
+
     def collision_white_balls(self):
-        first_collision = self.first_collision[0]
+        #还没使用
+        if self.first_collision==0:
 
-        first_hit = 0
-
-        posA = self.ball.pos[0]
-        for j in range(1,16):
-            if self.roll_in[0] == 0:
-                posB = self.ball.pos[j]
-                dir = posA - posB
-                delta_x = dir.norm()
-                if delta_x < 2*self.ball.ball_radius:
-                    if first_collision == 0: #检测第一个碰到的球
-                        first_hit = j
-                        first_collision = 1
-
-        self.first_collision[0] = first_collision
-        self.first_hit[0] = first_hit
+            posA = self.ball.pos[0]
+            for j in range(1,16):
+                if self.roll_in[0] == 0:
+                    posB = self.ball.pos[j]
+                    dir = posA - posB
+                    delta_x = dir.norm()
+                    if delta_x < 2*self.ball.ball_radius:
+                        if self.first_collision == 0: #检测第一个碰到的球
+                            self.first_hit = j
+                            self.first_collision = 1
 
 
     @ti.func
@@ -106,7 +101,6 @@ class Table_tennis: # all ball number = 15+1
             self.ball.vel[index].x *= -1
         elif  self.ball.pos[index].y < self.ball.ball_radius or self.ball.pos[index].y  > self.table.height-self.ball.ball_radius:
             self.ball.vel[index].y *= -1
-
 
     @ti.func
     def check_roll_in(self,index) ->ti.i32:
@@ -129,70 +123,126 @@ class Table_tennis: # all ball number = 15+1
                 self.check_roll_in(i)
                 self.check_boundary(i)
 
-    @ti.kernel
+
     def hit_finish(self):
         #结束一次击球，需要判断击球是否犯规
-        if self.player.ball_choose_finish == 1:
-            hit_result = self.change_player()
-            if hit_result == 2:
-                self.game_state[0] = 1-self.now_player[0]
-            elif hit_result == 3:
-                self.game_state[0] = self.now_player[0]
-            elif hit_result == 1:
-                self.now_player[0] = 1-self.now_player[0]
-            else:
-                pass
+
+        hit_result = self.change_player()
+        if hit_result == 2:
+            self.game_state[0] = 1-self.now_player[0]
+        elif hit_result == 3:
+            self.game_state[0] = self.now_player[0]
+        elif hit_result == 1:
+            self.now_player[0] = 1-self.now_player[0]
+        else:
+            pass
+
+        print('now player is ', self.now_player[0])
+        for i in range(1,16):
+            self.last_rollin[i] = self.roll_in[i]
+
+        
     
-    @ti.func
+
     def change_player(self) -> ti.i16:
+        #先进行是否选了花色判断
         # 返回0，继续击球，返回1，交换击球，返回2，直接结束游戏（比赛输了；返回3，进黑八，比赛赢了
         change_id = 0
         wrong_hit_flag = 1
-        if self.player.ball_choose[self.now_player[0]] == 0:#打花色球1-7
-            if self.first_hit[0]>=0 and self.first_hit[0]<=7:
-                wrong_hit_flag=0
-        if self.player.ball_choose[self.now_player[0]] == 1:#打全色球9-15
-            if self.first_hit[0]>=9 and self.first_hit[0]<=15:
-                wrong_hit_flag=0
-            
-        if self.roll_in[8] == 1:#进黑八直接结束
-            if self.player.hit_black[self.now_player[0]]==1:
-                change_id =3
-            else:
-                change_id = 2
-        elif self.roll_in[0] == 1: #进了白球
-            self.free_ball()
-            self.roll_in[0] = 0
-
-            change_id =1 
-        elif wrong_hit_flag: #先碰到了别人球
-            self.free_ball()
-
-            change_id = 1
-        else: #正常击球
-            flag = 0
-            for i in range(0,16):
-                if self.last_rollin[i] != self.roll_in[i]:
-                    if i >= self.player.target_ball[self.player.ball_choose[self.now_player[0]],0] and i <= self.player.target_ball[self.player.ball_choose[self.now_player[0]],6]:
-
-                        change_id = 0
-                        flag = 1
-            if flag == 0:
-
+        if self.player.ball_choose_finish == 1:
+            if self.player.ball_choose[self.now_player[0]] == 0:#打花色球1-7
+                if self.first_hit>=0 and self.first_hit<=7:
+                    wrong_hit_flag=0
+            if self.player.ball_choose[self.now_player[0]] == 1:#打全色球9-15
+                if self.first_hit>=9 and self.first_hit<=15:
+                    wrong_hit_flag=0
+                
+            if self.roll_in[8] == 1:#进黑八直接结束
+                if self.player.hit_black[self.now_player[0]]==1:
+                    change_id =3
+                    print("犯规：打进黑八，游戏结束，失败")
+                else:
+                    change_id = 2
+                    print("游戏结束")
+            elif self.roll_in[0] == 1: #进了白球
+                self.free_ball()
+                self.roll_in[0] = 0
+                change_id =1 
+                print("犯规：白球落袋，自由球")
+            elif wrong_hit_flag: #先碰到了别人球
+                self.free_ball()
                 change_id = 1
-        
+                print("犯规：击打对方球，自由球")
+            else: #正常击球
+                flag = 0
+                for i in range(0,16):
+                    if self.last_rollin[i] != self.roll_in[i]:
+                        if i >= self.player.target_ball[self.player.ball_choose[self.now_player[0]],0] and i <= self.player.target_ball[self.player.ball_choose[self.now_player[0]],6]:
+
+                            change_id = 0
+                            flag = 1
+                if flag == 0:
+                    change_id = 1
+                    print("正常击球，交换球权")
+                else:
+                    print("进入目标球，继续击球")
+        else: #没选花色
+            if self.roll_in[8] == 1:#进黑八直接结束
+                change_id = 2
+            elif self.roll_in[0] == 1: #进了白球
+                self.free_ball()
+                self.roll_in[0] = 0
+                change_id =1 
+            elif self.first_hit==8: #碰了黑八
+                self.free_ball()
+                change_id = 1
+            else: #正常击球
+                #首先击中的球进了，那么就选色成功，没进就交换
+                if self.first_hit>=1 and self.first_hit<=7:
+                    flag = 0
+                    for i in range(7):
+                        if self.last_rollin[i+1] != self.roll_in[i+1]:
+                            flag =1
+                    
+                    if flag ==1:#选色成功
+                        self.player.ball_choose[self.now_player[0]] = 0
+                        self.player.ball_choose[1-self.now_player[0]] = 1
+                        self.player.ball_choose_finish = 1
+                        change_id = 0
+                        print("选色成功，玩家", self.now_player[0],"击打花色球")
+                    else:
+                        change_id = 1
+                elif self.first_hit>=9 and self.first_hit<=15:
+                    flag = 0
+                    for i in range(7):
+                        if self.last_rollin[i+9] != self.roll_in[i+9]:
+                            flag =1
+                    
+                    if flag ==1:#选色成功
+                        self.player.ball_choose[self.now_player[0]] = 1
+                        self.player.ball_choose[1-self.now_player[0]] = 0
+                        self.player.ball_choose_finish = 1
+                        change_id = 0
+                        print("选色成功，玩家", 1-self.now_player[0],"击打花色球")
+                    else:
+                        change_id = 1
+                else:#没达到球
+                    self.free_ball()
+                    change_id = 1
+                    print('没打到球')
+
+        # print('change id = ', change_id)
         return change_id
 
     
     #这里需要可以手动选择位置
-    @ti.func
+
     def free_ball(self):#自由球
         self.ball.pos[0] = ti.Vector([0.2 * self.table.width,0.5 * self.table.height])
 
 
     
 
-    @ti.func
     def safe_sqrt(self, x) ->ti.f32:
         x = ti.max(x, 0.0)
         return ti.sqrt(x)
@@ -222,14 +272,14 @@ class Table_tennis: # all ball number = 15+1
         self.collision_balls()
         self.collision_boundary()
 
-    @ti.kernel
+
     def hit(self, velocity: ti.f32, dir_x: ti.f32, dir_y: ti.f32):
         dir = ti.Vector([dir_x, dir_y])
         dir = dir / dir.norm()
         self.ball.vel[0] = dir * velocity
 
 
-    @ti.kernel
+
     def check_static(self) ->ti.f32:
         res = 0.0
         for i in range(16):

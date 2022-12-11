@@ -1,8 +1,7 @@
 import numpy as np
 import taichi as ti
-ti.init(arch=ti.cpu)
 
-@ti.data_oriented
+
 class player:
     def __init__(self, ball_choose, line_color):
         # -1：未选色；0 ：选花色球；1：选全色球
