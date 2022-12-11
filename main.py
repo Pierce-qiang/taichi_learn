@@ -49,6 +49,7 @@ while my_gui.running:
         if first_static == 1:
             table_tennis.hit_finish()
             table_tennis.first_collision=0
+            table_tennis.first_hit = -1
             first_static = 0
             print('stop')
             if table_tennis.game_state == 0:

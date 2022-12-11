@@ -36,7 +36,7 @@ class Table_tennis: # all ball number = 15+1
 
         # self.first_hit = ti.field(ti.i32, shape=1)
         # self.first_hit[0] = 0 #第一个碰到的球
-        self.first_hit = 0
+        self.first_hit = -1
         self.game_state = ti.field(ti.i32, shape=1)
         self.game_state[0] = -1 # -1: not end;0:player 1 win; 1:player 2 win
         
@@ -126,7 +126,7 @@ class Table_tennis: # all ball number = 15+1
 
     def hit_finish(self):
         #结束一次击球，需要判断击球是否犯规
-
+        print('first hit ball is ', self.first_hit)
         hit_result = self.change_player()
         if hit_result == 2:
             self.game_state[0] = 1-self.now_player[0]
@@ -151,7 +151,7 @@ class Table_tennis: # all ball number = 15+1
         wrong_hit_flag = 1
         if self.player.ball_choose_finish == 1:
             if self.player.ball_choose[self.now_player[0]] == 0:#打花色球1-7
-                if self.first_hit>=0 and self.first_hit<=7:
+                if self.first_hit>=1 and self.first_hit<=7:
                     wrong_hit_flag=0
             if self.player.ball_choose[self.now_player[0]] == 1:#打全色球9-15
                 if self.first_hit>=9 and self.first_hit<=15:
@@ -229,6 +229,7 @@ class Table_tennis: # all ball number = 15+1
                 else:#没达到球
                     self.free_ball()
                     change_id = 1
+                    print('first hit = ',self.first_hit)
                     print('没打到球')
 
         # print('change id = ', change_id)
